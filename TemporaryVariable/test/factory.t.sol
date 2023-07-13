@@ -9,7 +9,6 @@ contract testfactory is Test, factory {
     address user2 = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2;
 
     function setUp() public {
-        vm.prank(owner);
         _factory = new factory();
 
         vm.deal(user1, 100);
@@ -23,8 +22,7 @@ contract testfactory is Test, factory {
 
     function testFactory() public {
         vm.prank(user1);
-
-        //solution
+        _factory.transfer(user1, user1, 100);
 
         uint256 newbalance = _factory.checkbalance(user1);
         assertEq(newbalance, 200);
