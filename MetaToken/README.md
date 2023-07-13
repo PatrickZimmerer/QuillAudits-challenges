@@ -14,7 +14,35 @@ Drain as much eth+weth you can from every contract and meet the assertions
 
 ### Steps
 
-- Just call \_factory.transfer(user1, user1, 100)
+#### lpToken / CurveToken
+
+- Owner == deployer
+- minter == pool => pool can mint, mint_relative & burnFrom
+
+#### swapPoolEthWeth / CurvePool
+
+- Owner == deployer
+- curvetoken == lptoken
+- initial_A == future_A // weird => value: 500
+- coins are wETH & eth (burn address)
+- fee == 4000000
+- admin_fee = 5000000000
+
+#### metaToken / MetaPoolToken
+
+- mint & burn rely on get_virtual_price(), when burning / minting you receive / send lp token to the MetaPoolToken
+
+#### starting conditions
+
+- Alice get's 20 ether, trades 10 eth for 10 wrapped eth, approves the pool for wETH uint256.max and adds liquidity (10eth & wETH)
+- Alice approves the metaToken contract for lpToken uint256.max and mints metatoken passing in her balance of lpToken
+
+- Bob get's 40 ether, trades 20 eth for 20 wrapped eth, approves the pool for wETH uint256.max and adds liquidity (20eth & wETH)
+- Bob approves the metaToken contract for lpToken uint256.max and mints metatoken passing in his balance of lpToken
+
+- lending pool get supplied with a LOT of liquidity => you can flashLoan a TON of wETH => maybe we can perform a inflation attack?
+
+- We start with 10 eth
 
 ### Attacker Contract
 
