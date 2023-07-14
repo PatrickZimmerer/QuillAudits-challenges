@@ -2,16 +2,43 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin-contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-contracts/security/ReentrancyGuard.sol";
+import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 import "./CurveToken.sol";
 
 contract CurvePool is ReentrancyGuard {
-    event TokenExchange(address indexed buyer, int128 sold_id, uint tokens_sold, int128 bought_id, uint tokens_bought);
-    event TokenExchangeUnderlying(address indexed buyer, int128 sold_id, uint tokens_sold, int128 bought_id, uint tokens_bought);
-    event AddLiquidity(address indexed provider, uint[2] amounts, uint[2] fees, uint invariant, uint token_supply); 
-    event RemoveLiquidity(address indexed provider, uint[2] amounts, uint[2] fees, uint token_supply);
-    event RemoveLiquidityOne(address indexed provider, uint token_amount, uint coin_amount);
+    event TokenExchange(
+        address indexed buyer,
+        int128 sold_id,
+        uint tokens_sold,
+        int128 bought_id,
+        uint tokens_bought
+    );
+    event TokenExchangeUnderlying(
+        address indexed buyer,
+        int128 sold_id,
+        uint tokens_sold,
+        int128 bought_id,
+        uint tokens_bought
+    );
+    event AddLiquidity(
+        address indexed provider,
+        uint[2] amounts,
+        uint[2] fees,
+        uint invariant,
+        uint token_supply
+    );
+    event RemoveLiquidity(
+        address indexed provider,
+        uint[2] amounts,
+        uint[2] fees,
+        uint token_supply
+    );
+    event RemoveLiquidityOne(
+        address indexed provider,
+        uint token_amount,
+        uint coin_amount
+    );
     event CommitNewFee(uint indexed deadline, uint fee, uint admin_fee);
     event NewFee(uint fee, uint admin_fee);
     event RampA(uint old_A, uint new_A, uint initial_time, uint future_time);
@@ -38,17 +65,17 @@ contract CurvePool is ReentrancyGuard {
 
     uint public initial_A;
     uint public future_A;
-    uint public initial_A_time; 
+    uint public initial_A_time;
     uint public future_A_time;
 
-    uint public admin_actions_deadline; 
-    uint public future_fee; 
-    uint public future_admin_fee; 
+    uint public admin_actions_deadline;
+    uint public future_fee;
+    uint public future_admin_fee;
 
     constructor(
         address _owner,
         address[2] memory _coins,
-        address _pool_token, 
+        address _pool_token,
         uint _a,
         uint _fee,
         uint _admin_fee
@@ -56,7 +83,7 @@ contract CurvePool is ReentrancyGuard {
         assert(_coins[0] == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         assert(_coins[1] != address(0));
 
-        coins = _coins; 
+        coins = _coins;
         initial_A = _a * A_PRECISION;
         future_A = _a * A_PRECISION;
         fee = _fee;
@@ -87,7 +114,7 @@ contract CurvePool is ReentrancyGuard {
          */
         uint d = get_D(_balances(0), _A());
         uint token_supply = ERC20(lp_token).totalSupply();
-        return d * PRECISION / token_supply;
+        return (d * PRECISION) / token_supply;
     }
 
     /**
@@ -99,10 +126,9 @@ contract CurvePool is ReentrancyGuard {
      * @return Expected amount of LP tokens received
      */
     function calc_token_amount(
-        uint[2] memory amounts, 
+        uint[2] memory amounts,
         bool is_deposit
     ) external view returns (uint) {
-        
         uint amp = _A();
         uint[2] memory bals = _balances(0);
         uint d0 = get_D(bals, amp);
@@ -122,7 +148,7 @@ contract CurvePool is ReentrancyGuard {
         } else {
             diff = d0 - d1;
         }
-        return diff * token_amount / d0;
+        return (diff * token_amount) / d0;
     }
 
     function get_dy(int128 i, int128 j, uint dx) external view returns (uint) {
@@ -130,7 +156,7 @@ contract CurvePool is ReentrancyGuard {
         uint x = xp[uint128(i)] + dx;
         uint y = get_y(i, j, x, xp);
         uint dy = xp[uint128(j)] - y - 1;
-        uint _fee = fee * dy / FEE_DENOMINATOR;
+        uint _fee = (fee * dy) / FEE_DENOMINATOR;
         return dy - _fee;
     }
 
@@ -143,7 +169,7 @@ contract CurvePool is ReentrancyGuard {
      * @return Amount of LP tokens received by depositing
      */
     function add_liquidity(
-        uint[2] memory amounts, 
+        uint[2] memory amounts,
         uint min_mint_amount
     ) external payable nonReentrant returns (uint) {
         // Initial invariant
@@ -153,7 +179,7 @@ contract CurvePool is ReentrancyGuard {
 
         uint token_supply = ERC20(lp_token).totalSupply();
         uint[2] memory new_balances = old_balances;
-        
+
         for (uint i; i < 2; i++) {
             if (token_supply == 0) {
                 assert(amounts[i] > 0);
@@ -175,21 +201,23 @@ contract CurvePool is ReentrancyGuard {
             uint _fee = fee / 2;
             uint _admin_fee = admin_fee;
             for (uint i; i < 2; i++) {
-                uint ideal_balance = d1 * old_balances[i] / d0;
+                uint ideal_balance = (d1 * old_balances[i]) / d0;
                 uint difference = 0;
                 if (ideal_balance > new_balances[i]) {
                     difference = ideal_balance - new_balances[i];
                 } else {
                     difference = new_balances[i] - ideal_balance;
                 }
-                fees[i] = _fee * difference / FEE_DENOMINATOR;
+                fees[i] = (_fee * difference) / FEE_DENOMINATOR;
                 if (_admin_fee != 0) {
-                    admin_balances[i] += fees[i] * _admin_fee / FEE_DENOMINATOR;
+                    admin_balances[i] +=
+                        (fees[i] * _admin_fee) /
+                        FEE_DENOMINATOR;
                 }
                 new_balances[i] -= fees[i];
             }
             d2 = get_D(new_balances, amp);
-            mint_amount = token_supply * (d2 - d0) / d0;
+            mint_amount = (token_supply * (d2 - d0)) / d0;
         } else {
             mint_amount = d1;
         }
@@ -199,13 +227,25 @@ contract CurvePool is ReentrancyGuard {
         // Take coins from the sender
         require(msg.value == amounts[0]);
         if (amounts[1] > 0) {
-            require(ERC20(coins[1]).transferFrom(msg.sender, address(this), amounts[1]));
+            require(
+                ERC20(coins[1]).transferFrom(
+                    msg.sender,
+                    address(this),
+                    amounts[1]
+                )
+            );
         }
 
         // Mint pool tokens
         CurveToken(lp_token).mint(msg.sender, mint_amount);
 
-        emit AddLiquidity(msg.sender, amounts, fees, d1, token_supply + mint_amount);
+        emit AddLiquidity(
+            msg.sender,
+            amounts,
+            fees,
+            d1,
+            token_supply + mint_amount
+        );
         return mint_amount;
     }
 
@@ -219,26 +259,26 @@ contract CurvePool is ReentrancyGuard {
      * @return Actual amount of `j` received
      */
     function exchange(
-        int128 i, 
-        int128 j, 
-        uint dx, 
+        int128 i,
+        int128 j,
+        uint dx,
         uint min_dy
     ) external payable nonReentrant returns (uint) {
         uint[2] memory xp = _balances(msg.value);
         uint x = xp[uint128(i)] + dx;
         uint y = get_y(i, j, x, xp);
         uint dy = xp[uint128(j)] - y - 1;
-        uint dy_fee = dy * fee / FEE_DENOMINATOR;
+        uint dy_fee = (dy * fee) / FEE_DENOMINATOR;
 
         // Convert all to real units
         dy = dy - dy_fee;
         require(dy >= min_dy, "Exchange resulted in fewer coins than expected");
 
         if (admin_fee != 0) {
-            uint dy_admin_fee = dy_fee * admin_fee / FEE_DENOMINATOR;
+            uint dy_admin_fee = (dy_fee * admin_fee) / FEE_DENOMINATOR;
             if (dy_admin_fee != 0) admin_balances[uint128(j)] += dy_admin_fee;
         }
-        
+
         address coin = coins[1];
         if (i == 0) {
             require(msg.value == dx);
@@ -246,7 +286,7 @@ contract CurvePool is ReentrancyGuard {
         } else {
             require(msg.value == 0);
             require(ERC20(coin).transferFrom(msg.sender, address(this), dx));
-            (bool success,) = msg.sender.call{value: dy}("");
+            (bool success, ) = msg.sender.call{value: dy}("");
             require(success);
         }
 
@@ -263,29 +303,40 @@ contract CurvePool is ReentrancyGuard {
      * @return List of amounts of coins that were withdrawn
      */
     function remove_liquidity(
-        uint _amount, 
+        uint _amount,
         uint[2] memory _min_amounts
     ) external nonReentrant returns (uint[2] memory) {
         uint[2] memory amounts = _balances(0);
         address token = lp_token;
         uint total_supply = ERC20(token).totalSupply();
-        require(CurveToken(token).burnFrom(msg.sender, _amount), "Insufficient funds");
+        require(
+            CurveToken(token).burnFrom(msg.sender, _amount),
+            "Insufficient funds"
+        );
 
         for (uint i; i < 2; i++) {
-            uint value = amounts[i] * _amount / total_supply;
-            require(value >= _min_amounts[i], "Withdraw resulted in fewer coins than expected");
+            uint value = (amounts[i] * _amount) / total_supply;
+            require(
+                value >= _min_amounts[i],
+                "Withdraw resulted in fewer coins than expected"
+            );
 
             amounts[i] = value;
             if (i == 0) {
-                (bool success,) = msg.sender.call{value: value}("");
-            require(success);
+                (bool success, ) = msg.sender.call{value: value}("");
+                require(success);
             } else {
                 require(ERC20(coins[1]).transfer(msg.sender, value));
             }
         }
 
         uint[2] memory empty;
-        emit RemoveLiquidity(msg.sender, amounts, empty, total_supply - _amount);
+        emit RemoveLiquidity(
+            msg.sender,
+            amounts,
+            empty,
+            total_supply - _amount
+        );
 
         return amounts;
     }
@@ -294,8 +345,14 @@ contract CurvePool is ReentrancyGuard {
 
     function ramp_A(uint _future_A, uint _future_time) external {
         require(msg.sender == owner, "Only owner can call");
-        require(block.timestamp >= initial_A_time + MIN_RAMP_TIME, "Not enough time passed");
-        require(_future_time >= block.timestamp + MIN_RAMP_TIME, "Insufficient time");
+        require(
+            block.timestamp >= initial_A_time + MIN_RAMP_TIME,
+            "Not enough time passed"
+        );
+        require(
+            _future_time >= block.timestamp + MIN_RAMP_TIME,
+            "Insufficient time"
+        );
 
         uint _initial_A = _A();
         uint _future_A_p = _future_A * A_PRECISION;
@@ -350,7 +407,7 @@ contract CurvePool is ReentrancyGuard {
         admin_actions_deadline = 0;
         fee = future_fee;
         admin_fee = future_admin_fee;
-        
+
         emit NewFee(fee, admin_fee);
     }
 
@@ -359,9 +416,9 @@ contract CurvePool is ReentrancyGuard {
 
         uint amount = admin_balances[0];
         if (amount != 0) {
-            (bool success,) = msg.sender.call{value: amount}("");
+            (bool success, ) = msg.sender.call{value: amount}("");
             require(success);
-        } 
+        }
 
         amount = admin_balances[1];
         if (amount != 0) require(ERC20(coins[1]).transfer(msg.sender, amount));
@@ -375,16 +432,16 @@ contract CurvePool is ReentrancyGuard {
     function _A() internal view returns (uint) {
         uint t1 = future_A_time;
         uint A1 = future_A;
-        
+
         if (block.timestamp < t1) {
             // Handle ramping up and down of A
             uint A0 = initial_A;
             uint t0 = initial_A_time;
             // Expressions in uint cannot have negative numbers, thus "if"
             if (A1 > A0) {
-                return A0 + (A1 - A0) * (block.timestamp - t0) / (t1 - t0);
+                return A0 + ((A1 - A0) * (block.timestamp - t0)) / (t1 - t0);
             } else {
-                return A0 - (A0 - A1) * (block.timestamp - t0) / (t1 - t0);
+                return A0 - ((A0 - A1) * (block.timestamp - t0)) / (t1 - t0);
             }
         } else {
             // when t1 == 0 or block.timestamp >= t1
@@ -399,7 +456,10 @@ contract CurvePool is ReentrancyGuard {
         ];
     }
 
-    function get_D(uint256[2] memory xp, uint256 amp) internal pure returns (uint256) {
+    function get_D(
+        uint256[2] memory xp,
+        uint256 amp
+    ) internal pure returns (uint256) {
         /**
          * D invariant calculation in non-overflowing integer operations iteratively
 
@@ -421,10 +481,12 @@ contract CurvePool is ReentrancyGuard {
         for (uint i; i < 255; i++) {
             uint d_p = d;
             for (uint j; j < 2; j++) {
-                d_p = d_p * d / (xp[j] * 2 + 1);
+                d_p = (d_p * d) / (xp[j] * 2 + 1);
             }
             dPrev = d;
-            d = (ann * s / A_PRECISION + d_p * 2) * d / ((ann - A_PRECISION) * d / A_PRECISION + 3 * d_p);
+            d =
+                (((ann * s) / A_PRECISION + d_p * 2) * d) /
+                (((ann - A_PRECISION) * d) / A_PRECISION + 3 * d_p);
             if (d > dPrev) {
                 if (d - dPrev <= 1) return d;
             } else {
@@ -436,7 +498,12 @@ contract CurvePool is ReentrancyGuard {
         revert("Pool is borked!");
     }
 
-    function get_y(int128 i, int128 j, uint x, uint[2] memory xp) internal view returns (uint) {
+    function get_y(
+        int128 i,
+        int128 j,
+        uint x,
+        uint[2] memory xp
+    ) internal view returns (uint) {
         /**
          * Calculate x[j] if one makes x[i] = x
 
@@ -453,7 +520,7 @@ contract CurvePool is ReentrancyGuard {
         require(j < 2, "j above N_COINS");
         require(i >= 0, "i below 0");
         require(i < 2, "i above N_COINS");
-        
+
         uint amp = _A();
         uint d = get_D(xp, amp);
         uint ann = amp * 2;
@@ -473,10 +540,10 @@ contract CurvePool is ReentrancyGuard {
                 }
             }
             s_ += _x;
-            c = c * d / (_x * 2);
+            c = (c * d) / (_x * 2);
         }
-        c = c * d * A_PRECISION / (ann * 2);
-        uint b = s_ + d * A_PRECISION / ann;
+        c = (c * d * A_PRECISION) / (ann * 2);
+        uint b = s_ + (d * A_PRECISION) / ann;
         uint y = d;
         for (uint _i; _i < 255; i++) {
             y_prev = y;
@@ -489,5 +556,4 @@ contract CurvePool is ReentrancyGuard {
         }
         revert("Pool is borked!");
     }
-
 }

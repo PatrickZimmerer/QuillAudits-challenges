@@ -2,8 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin-contracts/token/ERC20/ERC20.sol";
-
+import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract CurveToken is ERC20 {
     address public minter;
@@ -28,7 +27,7 @@ contract CurveToken is ERC20 {
     }
 
     function mint_relative(address _to, uint _frac) external returns (uint) {
-        uint _amount = totalSupply() * _frac / (10 ** decimals());
+        uint _amount = (totalSupply() * _frac) / (10 ** decimals());
         require(msg.sender == minter, "only minter can mint");
         if (_amount > 0) _mint(_to, _amount);
         return _amount;
@@ -36,7 +35,7 @@ contract CurveToken is ERC20 {
 
     function burnFrom(address _from, uint _amount) external returns (bool) {
         require(msg.sender == minter, "only minter can burn");
-        _burn(_from, _amount); 
+        _burn(_from, _amount);
         return true;
     }
 }

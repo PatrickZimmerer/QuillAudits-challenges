@@ -88,7 +88,7 @@ contract Challenge is Test {
 
     function testHack() public {
         uint lendingPoolWethBalance = weth.balanceOf(address(wethLendingPool));
-
+        console.log(lendingPoolWethBalance);
         vm.startPrank(hacker, hacker);
 
         //Your Solution
