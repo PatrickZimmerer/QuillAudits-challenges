@@ -44,6 +44,10 @@ Drain as much eth+weth you can from every contract and meet the assertions
 
 - We start with 10 eth
 
+- We can't steal from the wethLendingPool
+- We can't coompletely drain the lpToken which are stored in the metaToken contract
+- We shouldn't obtain ~ 200x as much ETH as the final weth
+
 ### Attacker Contract
 
 - Not needed
