@@ -48,6 +48,10 @@ Drain as much eth+weth you can from every contract and meet the assertions
 - We can't coompletely drain the lpToken which are stored in the metaToken contract
 - We shouldn't obtain ~ 200x as much ETH as the final weth
 
+#### Observations
+
+- `commit_new_fee` is not being called => `admin_actions_deadline` is not set => `apply_new_fee` can not be used
+
 ### Attacker Contract
 
 - Not needed
